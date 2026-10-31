@@ -1,554 +1,401 @@
+const API_URL = '/api';
 
- // -----------------------------------------
- // DOM ELEMENTS
- // -----------------------------------------
+let currentFilter = 'All';
+let deleteTargetId = null;
 
-const modal = document.getElementById("project-modal");
-const projectForm = document.getElementById("project-form");
+document.addEventListener('DOMContentLoaded', () => {
+    fetchStats();
+    fetchProjects();
+    fetchLiveActivity();
+    initDraggableDom();
+});
 
-const projectName = document.getElementById("project-name");
-const projectDescription = document.getElementById("project-description");
-const problemStatement = document.getElementById("problem-statement");
-
-const modalTitle = document.getElementById("modal-title");
-const formError = document.getElementById("form-error");
-
-const totalProjects = document.getElementById("total-projects");
-const activeProjects = document.getElementById("active-projects");
-
-const recentProjects = document.getElementById("recent-projects");
-const allProjects = document.getElementById("all-projects");
-
-// Delete confirmation modal
-const deleteModal = document.getElementById("delete-modal");
-const deleteProjectName = document.getElementById("delete-project-name");
-
-const confirmDeleteButton = document.getElementById("confirm-delete");
-const cancelDeleteButton = document.getElementById("cancel-delete");
-const closeDeleteModalButton = document.getElementById("close-delete-modal");
-
-
-// -----------------------------------------
-// APPLICATION STATE
-// -----------------------------------------
-
-let projects = [];
-let editingProjectId = null;
-let deletingProjectId = null;
-
-
-// -----------------------------------------
-// API COMMUNICATION
-// -----------------------------------------
-
-async function apiRequest(url, options = {}) {
-
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers
-        }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || "Something went wrong.");
-    }
-
-    return data;
-
-}
-
-
-// -----------------------------------------
-// LOAD PROJECTS
-// -----------------------------------------
-
-async function loadProjects() {
-
+async function fetchStats() {
     try {
+        const res = await fetch(`${API_URL}/stats`);
+        const stats = await res.json();
+        const statTotal = document.getElementById('statTotal');
+        const statActive = document.getElementById('statActive');
+        const statCompleted = document.getElementById('statCompleted');
+        const sysProjectCount = document.getElementById('sysProjectCount');
 
-        projects = await apiRequest("/api/projects");
+        if (statTotal) statTotal.innerText = stats.total || 0;
+        if (statActive) statActive.innerText = stats.active || 0;
+        if (statCompleted) statCompleted.innerText = stats.completed || 0;
+        if (sysProjectCount) sysProjectCount.innerText = `${stats.total || 0} Projects`;
+    } catch (err) {
+        console.error('Failed to fetch stats:', err);
+    }
+}
 
-        renderDashboard();
-        renderProjects();
+async function fetchProjects() {
+    const searchInput = document.getElementById('projectSearchInput');
+    const searchQuery = searchInput ? searchInput.value.trim() : '';
+    try {
+        const res = await fetch(`${API_URL}/projects?status=${encodeURIComponent(currentFilter)}&search=${encodeURIComponent(searchQuery)}`);
+        const projects = await res.json();
+        renderProjects(projects);
+    } catch (err) {
+        console.error('Failed to fetch projects:', err);
+    }
+}
 
-    } catch (error) {
+async function fetchLiveActivity() {
+    try {
+        const res = await fetch(`${API_URL}/projects`);
+        const projects = await res.json();
+        const timeline = document.getElementById('liveActivityTimeline');
+        if (!timeline) return;
 
-        console.error("Could not load projects:", error);
+        timeline.innerHTML = '';
+        if (!Array.isArray(projects) || projects.length === 0) {
+            timeline.innerHTML = `<p style="color: var(--text-muted); font-size: 0.8rem;">No recent project activity logged.</p>`;
+            return;
+        }
 
+        // Display recent projects as live activity items
+        projects.slice(0, 5).forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            item.innerHTML = `
+                <span class="timeline-icon">📁</span>
+                <div>
+                    <strong>Project [${escapeHtml(p.status)}]</strong>
+                    <p>${escapeHtml(p.title)} (${escapeHtml(p.category)})</p>
+                    <small>Updated: ${escapeHtml(p.updated_at || 'Just now')}</small>
+                </div>
+            `;
+            timeline.appendChild(item);
+        });
+    } catch (err) {
+        console.error('Failed to fetch live activity:', err);
+    }
+}
+
+function renderProjects(projects) {
+    const grid = document.getElementById('projectsGrid');
+    const emptyState = document.getElementById('emptyState');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+
+    if (!Array.isArray(projects) || projects.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        return;
     }
 
-}
+    if (emptyState) emptyState.classList.add('hidden');
 
-
-// -----------------------------------------
-// RENDER DASHBOARD
-// -----------------------------------------
-
-function renderDashboard() {
-
-    totalProjects.textContent = projects.length;
-
-    activeProjects.textContent = projects.filter(
-        project => project.status === "Active"
-    ).length;
-
-    const recent = projects.slice(0, 4);
-
-    renderProjectCards(recent, recentProjects);
-
-}
-
-
-// -----------------------------------------
-// RENDER ALL PROJECTS
-// -----------------------------------------
-
-function renderProjects() {
-
-    renderProjectCards(projects, allProjects);
-
-}
-
-
-// -----------------------------------------
-// PROJECT CARD GENERATOR
-// -----------------------------------------
-
-function renderProjectCards(projectList, container) {
-
-    if (projectList.length === 0) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>No projects yet</h3>
-                <p>Create your first engineering project.</p>
-
-                <button
-                    class="primary-button"
-                    data-action="create"
-                >
-                    Create Project
-                </button>
+    projects.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'project-card';
+        card.innerHTML = `
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <span class="badge badge-${(p.status || 'Active').toLowerCase()}">${escapeHtml(p.status || 'Active')}</span>
+                    <small style="color: var(--text-muted); font-size: 0.7rem;">${escapeHtml(p.category || 'General')}</small>
+                </div>
+                <h4 class="card-title">${escapeHtml(p.title || 'Untitled Project')}</h4>
+                <p class="card-desc">${escapeHtml(p.description || 'No description provided.')}</p>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-secondary btn-sm" onclick='openEditModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="promptDelete(${p.id})">Delete</button>
             </div>
         `;
-
-        return;
-
-    }
-
-
-    container.innerHTML = projectList.map(project => `
-
-        <article class="project-card">
-
-            <h3>${escapeHTML(project.name)}</h3>
-
-            <p>
-                ${escapeHTML(
-                    project.description || "No description provided."
-                )}
-            </p>
-
-            <div class="project-meta">
-
-                <span class="project-status">
-                    ${escapeHTML(project.status)}
-                </span>
-
-                <div class="project-actions">
-
-                    <button
-                        class="text-button"
-                        data-action="edit"
-                        data-id="${project.id}"
-                    >
-                        Open Project →
-                    </button>
-
-                    <button
-                        class="text-button delete-button"
-                        data-action="delete"
-                        data-id="${project.id}"
-                    >
-                        Delete
-                    </button>
-
-                </div>
-
-            </div>
-
-        </article>
-
-    `).join("");
-
-}
-
-
-// -----------------------------------------
-// BASIC HTML ESCAPING
-// -----------------------------------------
-
-function escapeHTML(value) {
-
-    return String(value).replace(/[&<>"']/g, character => {
-
-        const entities = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;"
-        };
-
-        return entities[character];
-
+        grid.appendChild(card);
     });
-
 }
 
+function handleSearchFilter() {
+    fetchProjects();
+}
 
-// -----------------------------------------
-// MODAL CONTROLS
-// -----------------------------------------
+function setFilter(status, btnElement) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    if (btnElement) btnElement.classList.add('active');
+    fetchProjects();
+}
 
 function openCreateModal() {
-
-    editingProjectId = null;
-
-    modalTitle.textContent = "Create Project";
-
-    projectForm.reset();
-
-    formError.textContent = "";
-
-    modal.classList.remove("hidden");
-
-    projectName.focus();
-
+    document.getElementById('modalTitle').innerText = 'New Engineering Project';
+    document.getElementById('projectId').value = '';
+    document.getElementById('projectForm').reset();
+    document.getElementById('projectModal').classList.remove('hidden');
 }
-
-
-function closeModal() {
-
-    modal.classList.add("hidden");
-
-    projectForm.reset();
-
-    editingProjectId = null;
-
-    formError.textContent = "";
-
-}
-
 
 function openEditModal(project) {
-
-    editingProjectId = project.id;
-
-    modalTitle.textContent = "Edit Project";
-
-    projectName.value = project.name;
-    projectDescription.value = project.description || "";
-    problemStatement.value = project.problem_statement || "";
-
-    formError.textContent = "";
-
-    modal.classList.remove("hidden");
-
+    document.getElementById('modalTitle').innerText = 'Edit Engineering Project';
+    document.getElementById('projectId').value = project.id;
+    document.getElementById('title').value = project.title || '';
+    document.getElementById('category').value = project.category || 'General Engineering';
+    document.getElementById('status').value = project.status || 'Active';
+    document.getElementById('problemStatement').value = project.problem_statement || '';
+    document.getElementById('description').value = project.description || '';
+    document.getElementById('projectModal').classList.remove('hidden');
 }
 
-
-// -----------------------------------------
-// CREATE / UPDATE PROJECT
-// -----------------------------------------
-
-projectForm.addEventListener("submit", async event => {
-
-    event.preventDefault();
-
-    const projectData = {
-        name: projectName.value.trim(),
-        description: projectDescription.value.trim(),
-        problem_statement: problemStatement.value.trim()
+async function saveProject(e) {
+    e.preventDefault();
+    const id = document.getElementById('projectId').value;
+    const payload = {
+        title: document.getElementById('title').value,
+        category: document.getElementById('category').value,
+        status: document.getElementById('status').value,
+        problem_statement: document.getElementById('problemStatement').value,
+        description: document.getElementById('description').value
     };
 
-
-    if (!projectData.name) {
-
-        formError.textContent = "Please enter a project name.";
-
-        return;
-
-    }
-
-
-    const isEditing = editingProjectId !== null;
-
-    const url = isEditing
-        ? `/api/projects/${editingProjectId}`
-        : "/api/projects";
-
-    const method = isEditing ? "PUT" : "POST";
-
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/projects/${id}` : `${API_URL}/projects`;
 
     try {
-
-        await apiRequest(url, {
-            method,
-            body: JSON.stringify(projectData)
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
+        
+        if (response.ok) {
+            closeModal('projectModal');
+            document.getElementById('projectForm').reset();
+            document.getElementById('projectId').value = '';
 
-        closeModal();
+            const searchInput = document.getElementById('projectSearchInput');
+            if (searchInput) searchInput.value = '';
+            currentFilter = 'All';
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.innerText.trim() === 'All') btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
 
-        await loadProjects();
-
-    } catch (error) {
-
-        formError.textContent = error.message;
-
+            await fetchProjects();
+            await fetchStats();
+            await fetchLiveActivity();
+        } else {
+            console.error('Server returned error while saving project.');
+        }
+    } catch (err) {
+        console.error('Error saving project:', err);
     }
-
-});
-
-
-// -----------------------------------------
-// DELETE PROJECT
-// -----------------------------------------
-
-function openDeleteModal(project) {
-
-    deletingProjectId = project.id;
-
-    deleteProjectName.textContent = project.name;
-
-    deleteModal.classList.remove("hidden");
-
 }
 
-
-function closeDeleteModal() {
-
-    deleteModal.classList.add("hidden");
-
-    deletingProjectId = null;
-
+function promptDelete(id) {
+    deleteTargetId = id;
+    document.getElementById('confirmDeleteBtn').onclick = executeDelete;
+    document.getElementById('deleteModal').classList.remove('hidden');
 }
 
-
-async function deleteProject() {
-
-    if (deletingProjectId === null) return;
-
-    const projectId = deletingProjectId;
-
-    confirmDeleteButton.disabled = true;
-
+async function executeDelete() {
+    if (!deleteTargetId) return;
     try {
+        await fetch(`${API_URL}/projects/${deleteTargetId}`, { method: 'DELETE' });
+        closeModal('deleteModal');
+        deleteTargetId = null;
+        fetchProjects();
+        fetchStats();
+        fetchLiveActivity();
+    } catch (err) {
+        console.error('Error deleting project:', err);
+    }
+}
 
-        await apiRequest(`/api/projects/${projectId}`, {
-            method: "DELETE"
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function switchView(viewName, element) {
+    document.querySelectorAll('.sidebar .nav-item').forEach(item => item.classList.remove('active'));
+    if (element) {
+        element.classList.add('active');
+    } else {
+        document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+            if (item.innerText.includes(viewName)) item.classList.add('active');
         });
-
-        closeDeleteModal();
-
-        await loadProjects();
-
-    } catch (error) {
-
-        console.error("Could not delete project:", error);
-
-        alert(`Project deletion failed: ${error.message}`);
-
-    } finally {
-
-        confirmDeleteButton.disabled = false;
-
     }
 
+    const cmdCenter = document.getElementById('viewCommandCenter');
+    const dynamicView = document.getElementById('viewDynamic');
+
+    if (viewName === 'Command Center' || viewName === 'Recent' || viewName === 'My Projects') {
+        cmdCenter.classList.remove('hidden');
+        dynamicView.classList.add('hidden');
+        fetchProjects();
+        fetchLiveActivity();
+    } else {
+        cmdCenter.classList.add('hidden');
+        dynamicView.classList.remove('hidden');
+        document.getElementById('dynamicViewTitle').innerText = viewName;
+        document.getElementById('dynamicViewDesc').innerText = `${viewName} module active in EDEN ecosystem.`;
+        
+        const contentArea = document.getElementById('dynamicViewContent');
+        if (viewName === 'Simulation Lab') {
+            contentArea.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <h4>Simulation Parameters</h4>
+                        <div class="form-group" style="margin-top: 12px;">
+                            <label>Input Voltage (V)</label>
+                            <input type="number" value="12.0">
+                        </div>
+                        <div class="form-group">
+                            <label>Load Resistance (Ω)</label>
+                            <input type="number" value="45.0">
+                        </div>
+                        <button class="btn btn-primary" style="margin-top: 10px;" onclick="alert('Simulation executed successfully! Output efficiency optimized.')">Run Simulation</button>
+                    </div>
+                    <div style="background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <h4>Real-Time Telemetry</h4>
+                        <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">System operating at nominal thresholds. Power output stable.</p>
+                        <div style="margin-top: 20px; font-size: 1.2rem; font-weight: 700; color: var(--green-primary);">Efficiency: 94.2%</div>
+                    </div>
+                </div>
+            `;
+        } else if (viewName === 'Idea Studio') {
+            contentArea.innerHTML = `<p>Concept incubator active. Brainstorming raw ideas and sketches.</p>`;
+        } else if (viewName === 'Research Library') {
+            contentArea.innerHTML = `<p>Centralized data sheets, equations, and research publications repository.</p>`;
+        } else {
+            contentArea.innerHTML = `<p>Workspace module initialized and ready for engineering tasks.</p>`;
+        }
+    }
 }
 
-
-// -----------------------------------------
-// PROJECT CARD ACTIONS
-// -----------------------------------------
-
-document.addEventListener("click", event => {
-
-    const button = event.target.closest("[data-action]");
-
-    if (!button) return;
-
-    const action = button.dataset.action;
-
-
-    if (action === "create") {
-
-        openCreateModal();
-
+function toggleSidebar() {
+    const sidebar = document.getElementById('appSidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('collapsed');
     }
-
-
-    if (action === "edit") {
-
-        const projectId = Number(button.dataset.id);
-
-        const project = projects.find(
-            item => item.id === projectId
-        );
-
-        if (project) {
-
-            openEditModal(project);
-
-        }
-
-    }
-
-
-    if (action === "delete") {
-
-        const projectId = Number(button.dataset.id);
-
-        const project = projects.find(
-            item => item.id === projectId
-        );
-
-        if (project) {
-
-            openDeleteModal(project);
-
-        }
-
-    }
-
-});
-
-
-// -----------------------------------------
-// NAVIGATION
-// -----------------------------------------
-
-const navigationButtons = document.querySelectorAll(".nav-item");
-
-const pages = {
-    dashboard: document.getElementById("dashboard-page"),
-    projects: document.getElementById("projects-page"),
-    settings: document.getElementById("settings-page")
-};
-
-
-const pageTitles = {
-    dashboard: "Command Center",
-    projects: "Projects",
-    settings: "Settings"
-};
-
-
-function navigateTo(pageName) {
-
-    Object.entries(pages).forEach(([name, page]) => {
-
-        page.classList.toggle("hidden", name !== pageName);
-
-    });
-
-
-    navigationButtons.forEach(button => {
-
-        button.classList.toggle(
-            "active",
-            button.dataset.page === pageName
-        );
-
-    });
-
-
-    document.getElementById("page-title").textContent =
-        pageTitles[pageName];
-
 }
 
+function toggleTheme() {
+    const html = document.documentElement;
+    const btn = document.getElementById('themeToggleBtn');
+    if (html.getAttribute('data-theme') === 'dark') {
+        html.removeAttribute('data-theme');
+        if (btn) btn.innerText = '☀️';
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        if (btn) btn.innerText = '🌙';
+    }
+}
 
-navigationButtons.forEach(button => {
+// --- Draggable DOM AI Companion ---
+function initDraggableDom() {
+    const bubble = document.getElementById('domFloatingBubble');
+    const chatWin = document.getElementById('domChatWindow');
+    if (!bubble || !chatWin) return;
 
-    button.addEventListener("click", () => {
+    let isDragging = false;
+    let hasMoved = false;
+    let startX, startY;
+    let initialX, initialY;
 
-        navigateTo(button.dataset.page);
+    bubble.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        hasMoved = false;
+        startX = e.clientX;
+        startY = e.clientY;
 
+        const rect = bubble.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+
+        e.preventDefault();
     });
 
-});
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
 
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            hasMoved = true;
+        }
 
-// -----------------------------------------
-// BUTTON EVENTS
-// -----------------------------------------
+        let newX = initialX + dx;
+        let newY = initialY + dy;
 
-document.getElementById("new-project-btn")
-    .addEventListener("click", openCreateModal);
+        bubble.style.left = `${newX}px`;
+        bubble.style.top = `${newY}px`;
+        bubble.style.right = 'auto';
+        bubble.style.bottom = 'auto';
 
-
-document.getElementById("empty-create-btn")
-    .addEventListener("click", openCreateModal);
-
-
-document.getElementById("close-modal")
-    .addEventListener("click", closeModal);
-
-
-document.getElementById("cancel-modal")
-    .addEventListener("click", closeModal);
-
-
-document.getElementById("view-all-btn")
-    .addEventListener("click", () => {
-
-        navigateTo("projects");
-
+        // Keep chat window aligned near DOM
+        chatWin.style.left = `${newX - 300}px`;
+        chatWin.style.top = `${newY - 450}px`;
+        chatWin.style.right = 'auto';
+        chatWin.style.bottom = 'auto';
     });
 
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
 
-// Project modal overlay
+    // Toggle chat on click (if didn't drag)
+    bubble.addEventListener('click', () => {
+        if (!hasMoved) {
+            toggleDomChat();
+        }
+    });
+}
 
-modal.addEventListener("click", event => {
-
-    if (event.target === modal) {
-
-        closeModal();
-
+function toggleDomChat() {
+    const chatWin = document.getElementById('domChatWindow');
+    if (chatWin) {
+        chatWin.classList.toggle('hidden');
     }
+}
 
-});
-
-
-// Delete modal buttons
-
-confirmDeleteButton.addEventListener("click", deleteProject);
-
-cancelDeleteButton.addEventListener("click", closeDeleteModal);
-
-closeDeleteModalButton.addEventListener("click", closeDeleteModal);
-
-
-// Delete modal overlay
-
-deleteModal.addEventListener("click", event => {
-
-    if (event.target === deleteModal) {
-
-        closeDeleteModal();
-
+function sendAiPrompt(promptText) {
+    const input = document.getElementById('aiInputText');
+    if (input) {
+        input.value = promptText;
+        submitAiMessage();
     }
+}
 
-});
+function handleAiKeyPress(e) {
+    if (e.key === 'Enter') {
+        submitAiMessage();
+    }
+}
 
+function submitAiMessage() {
+    const input = document.getElementById('aiInputText');
+    if (!input || !input.value.trim()) return;
+    const text = input.value.trim();
+    input.value = '';
 
-// -----------------------------------------
-// INITIALIZE APPLICATION
-// -----------------------------------------
+    const chatBody = document.getElementById('domChatBody');
+    if (chatBody) {
+        const userMsg = document.createElement('div');
+        userMsg.className = 'chat-bubble';
+        userMsg.style.background = 'var(--green-light)';
+        userMsg.style.marginLeft = 'auto';
+        userMsg.style.maxWidth = '85%';
+        userMsg.innerText = text;
+        chatBody.appendChild(userMsg);
 
-loadProjects();
+        setTimeout(() => {
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'chat-bubble ai';
+            aiMsg.innerText = `DOM analyzing query: "${text}". Systems online and ready to assist with your engineering workflow.`;
+            chatBody.appendChild(aiMsg);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }, 500);
+
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+}

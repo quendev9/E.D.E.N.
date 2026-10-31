@@ -1,252 +1,168 @@
-
 import sqlite3
-from pathlib import Path
-from datetime import datetime, timezone
+import os
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 
-from flask import Flask, jsonify, request, send_from_directory
+app = Flask(__name__)
+CORS(app)
 
-
-# -----------------------------------------
-# PATHS AND CONFIGURATION
-# -----------------------------------------
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-FRONTEND_DIR = BASE_DIR / "frontend"
-DATABASE_DIR = BASE_DIR / "database"
-DATABASE_PATH = DATABASE_DIR / "eden.db"
-
-app = Flask(
-    __name__,
-    static_folder=str(FRONTEND_DIR),
-    static_url_path="/static"
-)
-
-
-# -----------------------------------------
-# DATABASE
-# -----------------------------------------
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'eden.db')
+FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
 
 def get_db():
-    connection = sqlite3.connect(DATABASE_PATH)
-    connection.row_factory = sqlite3.Row
-    return connection
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-
-def initialize_database():
-    DATABASE_DIR.mkdir(exist_ok=True)
-
-    connection = get_db()
-
-    connection.execute("""
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT DEFAULT '',
-            problem_statement TEXT DEFAULT '',
+            title TEXT NOT NULL,
+            category TEXT DEFAULT 'General Engineering',
+            description TEXT,
+            problem_statement TEXT,
             status TEXT DEFAULT 'Active',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+    ''')
+    conn.commit()
+    conn.close()
 
-    connection.commit()
-    connection.close()
+init_db()
 
+# Serve Frontend Static Files
+@app.route('/')
+def serve_index():
+    return send_from_directory(FRONTEND_DIR, 'index.html')
 
-def project_to_dict(project):
-    return dict(project)
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    return send_from_directory(os.path.join(FRONTEND_DIR, 'css'), filename)
 
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    return send_from_directory(os.path.join(FRONTEND_DIR, 'js'), filename)
 
-def get_timestamp():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-# -----------------------------------------
-# FRONTEND ROUTES
-# -----------------------------------------
-
-@app.route("/")
-def home():
-    return send_from_directory(FRONTEND_DIR, "index.html")
-
-
-# -----------------------------------------
-# PROJECT API
-# -----------------------------------------
-
-@app.route("/api/projects", methods=["GET"])
+# API Routes
+@app.route('/api/projects', methods=['GET'])
 def get_projects():
-    connection = get_db()
+    status_filter = request.args.get('status', 'All')
+    search_query = request.args.get('search', '').strip()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    query = "SELECT * FROM projects WHERE 1=1"
+    params = []
+    
+    if status_filter != 'All':
+        query += " AND status = ?"
+        params.append(status_filter)
+        
+    if search_query:
+        query += " AND (title LIKE ? OR description LIKE ? OR problem_statement LIKE ?)"
+        wildcard = f"%{search_query}%"
+        params.extend([wildcard, wildcard, wildcard])
+        
+    query += " ORDER BY updated_at DESC"
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    projects = [dict(row) for row in rows]
+    conn.close()
+    
+    return jsonify(projects)
 
-    projects = connection.execute("""
-        SELECT * FROM projects
-        ORDER BY updated_at DESC
-    """).fetchall()
-
-    connection.close()
-
-    return jsonify([project_to_dict(p) for p in projects])
-
-
-@app.route("/api/projects", methods=["POST"])
+@app.route('/api/projects', methods=['POST'])
 def create_project():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or request.form or {}
+    title = data.get('title')
+    
+    if not title:
+        print("❌ ERROR: Title is missing from request data.")
+        return jsonify({'error': 'Title is required'}), 400
+        
+    category = data.get('category', 'General Engineering')
+    description = data.get('description', '')
+    problem_statement = data.get('problem_statement', '')
+    status = data.get('status', 'Active')
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO projects (title, category, description, problem_statement, status)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (title, category, description, problem_statement, status))
+        conn.commit()
+        new_id = cursor.lastrowid
+        conn.close()
+        print(f"✅ SUCCESS: Created project ID {new_id}: '{title}' [{status}]")
+        return jsonify({'id': new_id, 'message': 'Project created successfully'}), 201
+    except Exception as e:
+        print(f"❌ Database Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
-    name = str(data.get("name", "")).strip()
-    description = str(data.get("description", "")).strip()
-    problem_statement = str(
-        data.get("problem_statement", "")
-    ).strip()
-
-    if not name:
-        return jsonify({
-            "error": "Project name is required."
-        }), 400
-
-    timestamp = get_timestamp()
-
-    connection = get_db()
-
-    cursor = connection.execute("""
-        INSERT INTO projects (
-            name,
-            description,
-            problem_statement,
-            status,
-            created_at,
-            updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        name,
-        description,
-        problem_statement,
-        "Active",
-        timestamp,
-        timestamp
-    ))
-
-    connection.commit()
-
-    project = connection.execute(
-        "SELECT * FROM projects WHERE id = ?",
-        (cursor.lastrowid,)
-    ).fetchone()
-
-    connection.close()
-
-    return jsonify(project_to_dict(project)), 201
-
-
-@app.route("/api/projects/<int:project_id>", methods=["GET"])
-def get_project(project_id):
-    connection = get_db()
-
-    project = connection.execute(
-        "SELECT * FROM projects WHERE id = ?",
-        (project_id,)
-    ).fetchone()
-
-    connection.close()
-
-    if project is None:
-        return jsonify({"error": "Project not found."}), 404
-
-    return jsonify(project_to_dict(project))
-
-
-@app.route("/api/projects/<int:project_id>", methods=["PUT"])
+@app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or request.form or {}
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE projects
+            SET title = ?, category = ?, description = ?, problem_statement = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (
+            data.get('title'),
+            data.get('category', 'General Engineering'),
+            data.get('description', ''),
+            data.get('problem_statement', ''),
+            data.get('status', 'Active'),
+            project_id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Project updated successfully'})
+    except Exception as e:
+        print(f"❌ Database Error on Update: {e}")
+        return jsonify({'error': str(e)}), 500
 
-    name = str(data.get("name", "")).strip()
-    description = str(data.get("description", "")).strip()
-    problem_statement = str(
-        data.get("problem_statement", "")
-    ).strip()
-
-    if not name:
-        return jsonify({
-            "error": "Project name is required."
-        }), 400
-
-    connection = get_db()
-
-    existing = connection.execute(
-        "SELECT id FROM projects WHERE id = ?",
-        (project_id,)
-    ).fetchone()
-
-    if existing is None:
-        connection.close()
-        return jsonify({"error": "Project not found."}), 404
-
-    connection.execute("""
-        UPDATE projects
-        SET name = ?,
-            description = ?,
-            problem_statement = ?,
-            updated_at = ?
-        WHERE id = ?
-    """, (
-        name,
-        description,
-        problem_statement,
-        get_timestamp(),
-        project_id
-    ))
-
-    connection.commit()
-
-    project = connection.execute(
-        "SELECT * FROM projects WHERE id = ?",
-        (project_id,)
-    ).fetchone()
-
-    connection.close()
-
-    return jsonify(project_to_dict(project))
-
-# -----------------------------------------
-# DELETE PROJECT
-# -----------------------------------------
-
-@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project(project_id):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM projects WHERE id = ?', (project_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Project deleted successfully'})
+    except Exception as e:
+        print(f"❌ Database Error on Delete: {e}")
+        return jsonify({'error': str(e)}), 500
 
-    connection = get_db()
-
-    existing = connection.execute(
-        "SELECT id FROM projects WHERE id = ?",
-        (project_id,)
-    ).fetchone()
-
-    if existing is None:
-        connection.close()
-
-        return jsonify({
-            "error": "Project not found."
-        }), 404
-
-    connection.execute(
-        "DELETE FROM projects WHERE id = ?",
-        (project_id,)
-    )
-
-    connection.commit()
-    connection.close()
-
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) as total FROM projects')
+    total = cursor.fetchone()['total']
+    cursor.execute("SELECT COUNT(*) as active FROM projects WHERE status = 'Active'")
+    active = cursor.fetchone()['active']
+    cursor.execute("SELECT COUNT(*) as completed FROM projects WHERE status = 'Completed'")
+    completed = cursor.fetchone()['completed']
+    conn.close()
+    
     return jsonify({
-        "message": "Project deleted successfully."
-    }), 200
+        'total': total,
+        'active': active,
+        'completed': completed
+    })
 
-# -----------------------------------------
-# APPLICATION STARTUP
-# -----------------------------------------
-
-initialize_database()
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
