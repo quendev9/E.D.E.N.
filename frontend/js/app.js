@@ -1,7 +1,7 @@
 
-// -----------------------------------------
-// DOM ELEMENTS
-// -----------------------------------------
+ // -----------------------------------------
+ // DOM ELEMENTS
+ // -----------------------------------------
 
 const modal = document.getElementById("project-modal");
 const projectForm = document.getElementById("project-form");
@@ -19,6 +19,14 @@ const activeProjects = document.getElementById("active-projects");
 const recentProjects = document.getElementById("recent-projects");
 const allProjects = document.getElementById("all-projects");
 
+// Delete confirmation modal
+const deleteModal = document.getElementById("delete-modal");
+const deleteProjectName = document.getElementById("delete-project-name");
+
+const confirmDeleteButton = document.getElementById("confirm-delete");
+const cancelDeleteButton = document.getElementById("cancel-delete");
+const closeDeleteModalButton = document.getElementById("close-delete-modal");
+
 
 // -----------------------------------------
 // APPLICATION STATE
@@ -26,6 +34,7 @@ const allProjects = document.getElementById("all-projects");
 
 let projects = [];
 let editingProjectId = null;
+let deletingProjectId = null;
 
 
 // -----------------------------------------
@@ -49,6 +58,7 @@ async function apiRequest(url, options = {}) {
     }
 
     return data;
+
 }
 
 
@@ -149,13 +159,25 @@ function renderProjectCards(projectList, container) {
                     ${escapeHTML(project.status)}
                 </span>
 
-                <button
-                    class="text-button"
-                    data-action="edit"
-                    data-id="${project.id}"
-                >
-                    Open Project →
-                </button>
+                <div class="project-actions">
+
+                    <button
+                        class="text-button"
+                        data-action="edit"
+                        data-id="${project.id}"
+                    >
+                        Open Project →
+                    </button>
+
+                    <button
+                        class="text-button delete-button"
+                        data-action="delete"
+                        data-id="${project.id}"
+                    >
+                        Delete
+                    </button>
+
+                </div>
 
             </div>
 
@@ -294,6 +316,63 @@ projectForm.addEventListener("submit", async event => {
 
 
 // -----------------------------------------
+// DELETE PROJECT
+// -----------------------------------------
+
+function openDeleteModal(project) {
+
+    deletingProjectId = project.id;
+
+    deleteProjectName.textContent = project.name;
+
+    deleteModal.classList.remove("hidden");
+
+}
+
+
+function closeDeleteModal() {
+
+    deleteModal.classList.add("hidden");
+
+    deletingProjectId = null;
+
+}
+
+
+async function deleteProject() {
+
+    if (deletingProjectId === null) return;
+
+    const projectId = deletingProjectId;
+
+    confirmDeleteButton.disabled = true;
+
+    try {
+
+        await apiRequest(`/api/projects/${projectId}`, {
+            method: "DELETE"
+        });
+
+        closeDeleteModal();
+
+        await loadProjects();
+
+    } catch (error) {
+
+        console.error("Could not delete project:", error);
+
+        alert(`Project deletion failed: ${error.message}`);
+
+    } finally {
+
+        confirmDeleteButton.disabled = false;
+
+    }
+
+}
+
+
+// -----------------------------------------
 // PROJECT CARD ACTIONS
 // -----------------------------------------
 
@@ -302,7 +381,6 @@ document.addEventListener("click", event => {
     const button = event.target.closest("[data-action]");
 
     if (!button) return;
-
 
     const action = button.dataset.action;
 
@@ -325,6 +403,23 @@ document.addEventListener("click", event => {
         if (project) {
 
             openEditModal(project);
+
+        }
+
+    }
+
+
+    if (action === "delete") {
+
+        const projectId = Number(button.dataset.id);
+
+        const project = projects.find(
+            item => item.id === projectId
+        );
+
+        if (project) {
+
+            openDeleteModal(project);
 
         }
 
@@ -417,11 +512,35 @@ document.getElementById("view-all-btn")
     });
 
 
+// Project modal overlay
+
 modal.addEventListener("click", event => {
 
     if (event.target === modal) {
 
         closeModal();
+
+    }
+
+});
+
+
+// Delete modal buttons
+
+confirmDeleteButton.addEventListener("click", deleteProject);
+
+cancelDeleteButton.addEventListener("click", closeDeleteModal);
+
+closeDeleteModalButton.addEventListener("click", closeDeleteModal);
+
+
+// Delete modal overlay
+
+deleteModal.addEventListener("click", event => {
+
+    if (event.target === deleteModal) {
+
+        closeDeleteModal();
 
     }
 

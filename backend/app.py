@@ -208,6 +208,38 @@ def update_project(project_id):
 
     return jsonify(project_to_dict(project))
 
+# -----------------------------------------
+# DELETE PROJECT
+# -----------------------------------------
+
+@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
+def delete_project(project_id):
+
+    connection = get_db()
+
+    existing = connection.execute(
+        "SELECT id FROM projects WHERE id = ?",
+        (project_id,)
+    ).fetchone()
+
+    if existing is None:
+        connection.close()
+
+        return jsonify({
+            "error": "Project not found."
+        }), 404
+
+    connection.execute(
+        "DELETE FROM projects WHERE id = ?",
+        (project_id,)
+    )
+
+    connection.commit()
+    connection.close()
+
+    return jsonify({
+        "message": "Project deleted successfully."
+    }), 200
 
 # -----------------------------------------
 # APPLICATION STARTUP

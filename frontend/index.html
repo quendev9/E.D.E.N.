@@ -210,7 +210,7 @@
     </div>
 
 
-    <!-- PROJECT MODAL -->
+    <!-- PROJECT CREATION / EDIT MODAL -->
 
     <div id="project-modal" class="modal-overlay hidden">
 
@@ -223,7 +223,11 @@
                     <h2 id="modal-title">Create Project</h2>
                 </div>
 
-                <button class="close-button" id="close-modal">
+                <button
+                    class="close-button"
+                    id="close-modal"
+                    type="button"
+                >
                     ×
                 </button>
 
@@ -265,11 +269,19 @@
 
                 <div class="modal-actions">
 
-                    <button type="button" class="secondary-button" id="cancel-modal">
+                    <button
+                        type="button"
+                        class="secondary-button"
+                        id="cancel-modal"
+                    >
                         Cancel
                     </button>
 
-                    <button type="submit" class="primary-button" id="save-project">
+                    <button
+                        type="submit"
+                        class="primary-button"
+                        id="save-project"
+                    >
                         Save Project
                     </button>
 
@@ -281,6 +293,69 @@
 
     </div>
 
+
+    <!-- DELETE CONFIRMATION MODAL -->
+
+    <div id="delete-modal" class="modal-overlay hidden">
+
+        <div class="modal">
+
+            <div class="modal-header">
+
+                <div>
+                    <span class="eyebrow">PROJECT MANAGEMENT</span>
+                    <h2>Delete Project</h2>
+                </div>
+
+                <button
+                    id="close-delete-modal"
+                    class="close-button"
+                    type="button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <p>
+                    Are you sure you want to permanently delete
+                    <strong id="delete-project-name"></strong>?
+                </p>
+
+                <p class="delete-warning">
+                    This action cannot be undone.
+                </p>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    id="cancel-delete"
+                    class="secondary-button"
+                    type="button"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    id="confirm-delete"
+                    class="danger-button"
+                    type="button"
+                >
+                    Delete Project
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- APPLICATION JAVASCRIPT -->
 
     <script src="/static/js/app.js"></script>
 
