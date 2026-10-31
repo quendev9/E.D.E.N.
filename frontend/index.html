@@ -1,0 +1,289 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>EDEN | Command Center</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+    <div class="app-layout">
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar">
+
+            <div class="brand">
+                <div class="brand-icon">E</div>
+
+                <div>
+                    <h2>EDEN</h2>
+                    <span>ENGINEERING ECOSYSTEM</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <p class="section-label">WORKSPACE</p>
+
+                <button class="nav-item active" data-page="dashboard">
+                    <span>◈</span>
+                    Command Center
+                </button>
+
+                <button class="nav-item" data-page="projects">
+                    <span>▦</span>
+                    Projects
+                </button>
+            </div>
+
+            <div class="sidebar-section">
+                <p class="section-label">SYSTEM</p>
+
+                <button class="nav-item" data-page="settings">
+                    <span>⚙</span>
+                    Settings
+                </button>
+            </div>
+
+            <div class="sidebar-bottom">
+                <div class="system-status">
+                    <span class="status-dot"></span>
+
+                    <div>
+                        <strong>LOCAL SYSTEM</strong>
+                        <small>EDEN is operational</small>
+                    </div>
+                </div>
+
+                <span class="version">EDEN BUILD 1.1</span>
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+
+        <main class="main-content">
+
+            <header class="topbar">
+
+                <div>
+                    <span class="breadcrumb">EDEN / WORKSPACE</span>
+                    <h1 id="page-title">Command Center</h1>
+                </div>
+
+                <button class="primary-button" id="new-project-btn">
+                    + New Project
+                </button>
+
+            </header>
+
+
+            <!-- DASHBOARD -->
+
+            <section id="dashboard-page" class="page">
+
+                <div class="welcome-section">
+                    <div>
+                        <span class="eyebrow">ENGINEERING WORKSPACE</span>
+
+                        <h2>Build something meaningful.</h2>
+
+                        <p>
+                            Turn ideas into research, designs,
+                            experiments, and real-world solutions.
+                        </p>
+                    </div>
+                </div>
+
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <span>TOTAL PROJECTS</span>
+                        <strong id="total-projects">0</strong>
+                        <small>Across your workspace</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>ACTIVE PROJECTS</span>
+                        <strong id="active-projects">0</strong>
+                        <small>Currently in development</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <span>STORAGE</span>
+                        <strong>LOCAL</strong>
+                        <small>Stored on this device</small>
+                    </div>
+
+                </div>
+
+
+                <div class="section-heading">
+
+                    <div>
+                        <h3>Recent Projects</h3>
+                        <p>Your latest engineering work.</p>
+                    </div>
+
+                    <button class="text-button" id="view-all-btn">
+                        View all →
+                    </button>
+
+                </div>
+
+
+                <div id="recent-projects" class="project-grid">
+
+                    <div class="empty-state">
+                        <h3>No projects yet</h3>
+                        <p>Your engineering journey starts here.</p>
+
+                        <button class="primary-button" id="empty-create-btn">
+                            Create your first project
+                        </button>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- PROJECTS PAGE -->
+
+            <section id="projects-page" class="page hidden">
+
+                <div class="section-heading">
+                    <div>
+                        <h3>All Projects</h3>
+                        <p>Manage your engineering projects.</p>
+                    </div>
+                </div>
+
+                <div id="all-projects" class="project-grid"></div>
+
+            </section>
+
+
+            <!-- SETTINGS PAGE -->
+
+            <section id="settings-page" class="page hidden">
+
+                <div class="section-heading">
+                    <div>
+                        <h3>Settings</h3>
+                        <p>Temporary prototype settings page.</p>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>EDEN Environment</h3>
+                    <p>Local-first development environment.</p>
+
+                    <div class="setting-row">
+                        <span>Storage</span>
+                        <strong>SQLite / Local</strong>
+                    </div>
+
+                    <div class="setting-row">
+                        <span>Backend</span>
+                        <strong>Python / Flask</strong>
+                    </div>
+
+                    <div class="setting-row">
+                        <span>Build</span>
+                        <strong>1.1 Prototype</strong>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- PROJECT MODAL -->
+
+    <div id="project-modal" class="modal-overlay hidden">
+
+        <div class="modal">
+
+            <div class="modal-header">
+
+                <div>
+                    <span class="eyebrow">PROJECT WORKSPACE</span>
+                    <h2 id="modal-title">Create Project</h2>
+                </div>
+
+                <button class="close-button" id="close-modal">
+                    ×
+                </button>
+
+            </div>
+
+
+            <form id="project-form">
+
+                <label for="project-name">Project Name</label>
+
+                <input
+                    type="text"
+                    id="project-name"
+                    placeholder="e.g. Solar Energy System"
+                    maxlength="120"
+                    required
+                >
+
+
+                <label for="project-description">Description</label>
+
+                <textarea
+                    id="project-description"
+                    placeholder="What are you building?"
+                    rows="3"
+                ></textarea>
+
+
+                <label for="problem-statement">Problem Statement</label>
+
+                <textarea
+                    id="problem-statement"
+                    placeholder="What problem are you trying to solve?"
+                    rows="3"
+                ></textarea>
+
+
+                <div id="form-error" class="form-error"></div>
+
+                <div class="modal-actions">
+
+                    <button type="button" class="secondary-button" id="cancel-modal">
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="primary-button" id="save-project">
+                        Save Project
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <script src="/static/js/app.js"></script>
+
+</body>
+
+</html>
