@@ -3,352 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EDEN — Engineering Management System</title>
+    <title>PROJECT EDEN — Engineering Management System</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Top Bar -->
-    <header class="top-bar">
-        <div class="logo-group">
-            <button class="icon-btn" onclick="toggleSidebar()" title="Toggle Sidebar">≡</button>
-            <svg class="logo-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-            </svg>
-            <span class="logo-text">EDEN</span>
-        </div>
-
-        <div class="search-container">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="projectSearchInput" placeholder="Search projects, tools, or knowledge...  Ctrl + K" oninput="handleSearchFilter()">
-        </div>
-
-        <div class="header-right">
-            <div class="system-pill">
-                <span class="pulse-dot"></span> System Online <span>∨</span>
-            </div>
-            <button class="icon-btn" title="Notifications">🔔</button>
-            <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme" onclick="toggleTheme()">☀️</button>
-            <div class="avatar">JD</div>
-        </div>
-    </header>
-
     <div class="app-layout">
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="appSidebar">
-            <div class="nav-section">
-                <span class="nav-label">MAIN</span>
-                <a href="#" class="nav-item active" onclick="switchView('Command Center', this)"><span class="icon">🌿</span> <span class="nav-text">Command Center</span></a>
-                <a href="#" class="nav-item" onclick="switchView('My Projects', this)"><span class="icon">📋</span> <span class="nav-text">My Projects</span></a>
-                <a href="#" class="nav-item" onclick="switchView('Recent', this)"><span class="icon">🕒</span> <span class="nav-text">Recent</span></a>
+            <div class="sidebar-header">
+                <h2>🌿 EDEN</h2>
+                <button class="btn-icon" onclick="toggleSidebar()" title="Collapse Sidebar">≡</button>
             </div>
-
-            <div class="nav-section">
-                <span class="nav-label">CREATE & ENGINEER</span>
-                <a href="#" class="nav-item" onclick="switchView('Idea Studio', this)"><span class="icon">💡</span> <span class="nav-text">Idea Studio</span></a>
-                <a href="#" class="nav-item" onclick="switchView('Design Studio', this)"><span class="icon">📐</span> <span class="nav-text">Design Studio</span></a>
-                <a href="#" class="nav-item" onclick="switchView('Simulation Lab', this)"><span class="icon">🧪</span> <span class="nav-text">Simulation Lab</span></a>
-                <a href="#" class="nav-item" onclick="switchView('Workshop', this)"><span class="icon">🔧</span> <span class="nav-text">Workshop</span></a>
-            </div>
-
-            <div class="nav-section">
-                <span class="nav-label">KNOWLEDGE & DISCOVERY</span>
-                <a href="#" class="nav-item" onclick="switchView('Research Library', this)"><span class="icon">📖</span> <span class="nav-text">Research Library</span></a>
-                <a href="#" class="nav-item" onclick="switchView('Planetary Lab', this)"><span class="icon">🌐</span> <span class="nav-text">Planetary Lab</span></a>
-            </div>
-
-            <div class="nav-section">
-                <span class="nav-label">SYSTEM</span>
-                <a href="#" class="nav-item" onclick="switchView('Settings', this)"><span class="icon">⚙️</span> <span class="nav-text">Settings</span></a>
-                <a href="#" class="nav-item" onclick="switchView('Help & Support', this)"><span class="icon">❓</span> <span class="nav-text">Help & Support</span></a>
-            </div>
-
+            <nav class="sidebar-nav">
+                <a class="nav-item active" onclick="switchView('Command Center', this)">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Command Center</span>
+                </a>
+                <a class="nav-item" onclick="switchView('Idea Studio', this)">
+                    <span class="nav-icon">💡</span>
+                    <span class="nav-label">Idea Studio</span>
+                </a>
+                <a class="nav-item" onclick="switchView('Simulation Lab', this)">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-label">Simulation Lab</span>
+                </a>
+                <a class="nav-item" onclick="switchView('Research Library', this)">
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-label">Research Library</span>
+                </a>
+            </nav>
             <div class="sidebar-footer">
-                <span class="nav-text">Build a sustainable<br>future together.</span>
+                <div class="system-status">
+                    <span class="status-dot"></span>
+                    <span class="nav-label" id="sysProjectCount">0 Projects</span>
+                </div>
             </div>
         </aside>
 
-        <!-- Main Workspace -->
-        <main class="main-workspace" id="mainWorkspace">
-            <!-- Command Center View (Default) -->
-            <div id="viewCommandCenter" class="view-container">
-                <!-- Hero Banner -->
-                <section class="hero-banner">
-                    <div class="hero-content">
-                        <h1>Good evening.</h1>
-                        <p>What are we engineering today?</p>
-                    </div>
-                </section>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h1 id="pageTitle">Engineering Ecosystem</h1>
+                </div>
+                <div class="topbar-right">
+                    <button class="btn btn-secondary btn-sm" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme">🌙</button>
+                </div>
+            </header>
 
-                <!-- Quick Actions Toolbar -->
-                <section class="quick-actions-section">
-                    <div class="section-title">
-                        <span>⚡ Quick Actions</span>
-                        <button class="text-btn">Customize ∨</button>
-                    </div>
-                    <div class="quick-actions-grid">
-                        <div class="action-card primary" onclick="openCreateModal()">
-                            <div class="action-icon green">+</div>
-                            <div>
-                                <strong>New Project</strong>
-                                <small>Start an invention →</small>
-                            </div>
+            <div class="content-container">
+                <!-- Command Center View (Default) -->
+                <div id="viewCommandCenter" class="view-section">
+                    <!-- Stats Overview -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-label">Total Projects</span>
+                            <h2 class="stat-value" id="statTotal">0</h2>
                         </div>
-                        <div class="action-card" onclick="switchView('Idea Studio')">
-                            <div class="action-icon green-light">💡</div>
-                            <div>
-                                <strong>Develop an Idea</strong>
-                                <small>Explore a concept →</small>
-                            </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Active Development</span>
+                            <h2 class="stat-value" id="statActive">0</h2>
                         </div>
-                        <div class="action-card" onclick="switchView('Research Library')">
-                            <div class="action-icon green-light">📖</div>
-                            <div>
-                                <strong>Research</strong>
-                                <small>Find knowledge →</small>
-                            </div>
-                        </div>
-                        <div class="action-card" onclick="switchView('Simulation Lab')">
-                            <div class="action-icon green-light">🧪</div>
-                            <div>
-                                <strong>Run Simulation</strong>
-                                <small>Test a model →</small>
-                            </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Completed Systems</span>
+                            <h2 class="stat-value" id="statCompleted">0</h2>
                         </div>
                     </div>
-                </section>
 
-                <!-- Two-Column Grid: Projects & Live Activity -->
-                <div class="two-col-grid">
-                    <!-- Left: Projects Grid -->
-                    <section class="content-block">
-                        <div class="block-header">
-                            <h3>🕒 Continue Working</h3>
-                            <a href="#" class="link-btn" onclick="switchView('My Projects')">View all →</a>
+                    <!-- Projects Workspace Header & Filters -->
+                    <div class="workspace-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                        <div class="filter-group" style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm filter-btn active" onclick="setFilter('All', this)">All</button>
+                            <button class="btn btn-secondary btn-sm filter-btn" onclick="setFilter('Active', this)">Active</button>
+                            <button class="btn btn-secondary btn-sm filter-btn" onclick="setFilter('Completed', this)">Completed</button>
                         </div>
-                        
-                        <div class="filter-pills" style="margin-bottom: 12px;">
-                            <button class="filter-btn active" onclick="setFilter('All', this)">All</button>
-                            <button class="filter-btn" onclick="setFilter('Active', this)">Active</button>
-                            <button class="filter-btn" onclick="setFilter('Completed', this)">Completed</button>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <input type="text" id="projectSearchInput" placeholder="Search projects..." oninput="handleSearchFilter()" style="padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 0.85rem;">
+                            <button class="btn btn-primary" onclick="openCreateModal()">+ New Project</button>
+                        </div>
+                    </div>
+
+                    <!-- Projects Grid & Activity Split -->
+                    <div class="dashboard-grid" style="display: grid; grid-template-columns: 3fr 1fr; gap: 20px;">
+                        <div class="projects-wrapper">
+                            <div id="projectsGrid" class="projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                                <!-- Dynamically populated project cards -->
+                            </div>
+                            <div id="emptyState" class="empty-state hidden" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                <p>No engineering projects found. Click <strong>+ New Project</strong> to begin.</p>
+                            </div>
                         </div>
 
-                        <div id="projectsGrid" class="projects-grid">
-                            <!-- SQLite Projects load dynamically here -->
+                        <!-- Live Activity Telemetry Sidebar -->
+                        <div class="activity-sidebar" style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px;">
+                            <h4 style="margin-bottom: 12px; font-size: 0.95rem; font-weight: 700;">Live Activity</h4>
+                            <div id="liveActivityTimeline" class="timeline" style="display: flex; flex-direction: column; gap: 12px;">
+                                <p style="color: var(--text-muted); font-size: 0.8rem;">Loading telemetry...</p>
+                            </div>
                         </div>
-
-                        <div id="emptyState" class="empty-state hidden">
-                            <p>No engineering projects found.</p>
-                        </div>
-                    </section>
-
-                    <!-- Right: Live Activity Log -->
-                    <section class="content-block">
-                        <div class="block-header">
-                            <h3>Live Activity Feed</h3>
-                            <a href="#" class="link-btn" onclick="fetchLiveActivity()">Refresh</a>
-                        </div>
-                        <div class="activity-timeline" id="liveActivityTimeline">
-                            <!-- Populated dynamically with real database logs -->
-                        </div>
-                    </section>
+                    </div>
                 </div>
 
-                <!-- Two-Column Grid: System Overview & Insights -->
-                <div class="two-col-grid">
-                    <!-- System Overview -->
-                    <section class="content-block">
-                        <div class="block-header">
-                            <h3>System Overview</h3>
-                            <a href="#" class="link-btn">View details →</a>
-                        </div>
-                        <div class="system-status-grid">
-                            <div class="sys-item">
-                                <span class="sys-icon">🗄️</span>
-                                <strong>Database</strong>
-                                <small class="status-online">● Connected</small>
-                            </div>
-                            <div class="sys-item">
-                                <span class="sys-icon">🖥️</span>
-                                <strong>Backend</strong>
-                                <small class="status-online">● Running</small>
-                            </div>
-                            <div class="sys-item">
-                                <span class="sys-icon">🤖</span>
-                                <strong>DOM (AI)</strong>
-                                <small class="status-online">● Ready</small>
-                            </div>
-                            <div class="sys-item">
-                                <span class="sys-icon">💾</span>
-                                <strong id="sysProjectCount">0 Projects</strong>
-                                <small>SQLite Active</small>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Engineering Insights -->
-                    <section class="content-block eco-card">
-                        <div class="eco-card-content">
-                            <div class="eco-leaf-badge">🌱</div>
-                            <div>
-                                <strong>Engineering Insights</strong>
-                                <p>Solar panel efficiency can be improved by up to 18% with a new material.</p>
-                                <button class="outline-btn-sm" onclick="switchView('Research Library')">Explore Research →</button>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-
-            <!-- Dynamic View Containers for other sections -->
-            <div id="viewDynamic" class="view-container hidden">
-                <div class="content-block" style="min-height: 400px;">
-                    <h2 id="dynamicViewTitle" style="margin-bottom: 16px;">Workspace</h2>
-                    <p id="dynamicViewDesc" style="color: var(--text-muted); margin-bottom: 24px;">Module active and connected to EDEN ecosystem.</p>
-                    <div id="dynamicViewContent"></div>
+                <!-- Dynamic Workspace View (Idea Studio, Simulation Lab, etc.) -->
+                <div id="viewDynamic" class="view-section hidden">
+                    <div class="dynamic-header" style="margin-bottom: 20px;">
+                        <h2 id="dynamicViewTitle" style="font-weight: 700;">Module</h2>
+                        <p id="dynamicViewDesc" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+                    </div>
+                    <div id="dynamicViewContent">
+                        <!-- Module content gets injected here -->
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Floating Movable DOM AI Companion -->
-    <div id="domFloatingBubble" class="dom-bubble" title="Click to talk to DOM, drag to move">
-        <div class="dom-avatar">🤖</div>
-        <span class="dom-name">DOM</span>
+    <!-- Draggable DOM AI Companion Bubble -->
+    <div id="domFloatingBubble" class="dom-bubble" title="Click to open DOM AI or drag to reposition" style="position: fixed; bottom: 24px; right: 24px; width: 50px; height: 50px; background: var(--green-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; font-weight: 700;">
+        DOM
     </div>
 
-    <!-- DOM Interactive Chat Window -->
-    <div id="domChatWindow" class="dom-chat-window hidden">
-        <div class="ai-header">
-            <div class="ai-title">
-                <span class="ai-icon">🤖</span>
-                <strong>DOM (EDEN AI)</strong>
-            </div>
-            <div>
-                <button class="panel-btn" onclick="toggleDomChat()">✕</button>
+    <!-- DOM Chat Window -->
+    <div id="domChatWindow" class="dom-chat-window hidden" style="position: fixed; bottom: 85px; right: 24px; width: 320px; height: 420px; background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 1001;">
+        <div class="chat-header" style="padding: 12px; background: var(--green-light); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.9rem; color: var(--green-primary);">DOM AI Companion</strong>
+            <button class="btn-icon" onclick="toggleDomChat()" style="background: none; border: none; cursor: pointer; font-size: 1rem;">×</button>
+        </div>
+        <div id="domChatBody" class="chat-body" style="flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+            <div class="chat-bubble ai" style="background: var(--bg-card); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);">
+                Systems online. How can I assist your engineering workflow today?
             </div>
         </div>
-
-        <div class="ai-chat-body" id="domChatBody">
-            <div class="chat-bubble ai">
-                Hello! I am DOM, your AI engineering companion. How can I help you today?
-            </div>
-
-            <div class="prompt-suggestions">
-                <small>Try asking:</small>
-                <button class="suggestion-btn" onclick="sendAiPrompt('Compare solar panel options')">🍃 Compare solar panel options <span>→</span></button>
-                <button class="suggestion-btn" onclick="sendAiPrompt('Explain renewable energy')">🌿 Explain renewable energy <span>→</span></button>
-                <button class="suggestion-btn" onclick="openCreateModal()">➕ Help with my project <span>→</span></button>
-            </div>
-
-            <div class="chart-box">
-                <span class="chart-title">Efficiency Comparison</span>
-                <canvas id="efficiencyChart" height="130"></canvas>
-            </div>
-        </div>
-
-        <div class="ai-input-area">
-            <input type="text" id="aiInputText" placeholder="Ask DOM..." onkeypress="handleAiKeyPress(event)">
-            <button class="send-btn" onclick="submitAiMessage()">➤</button>
+        <div class="chat-footer" style="padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 6px;">
+            <input type="text" id="aiInputText" placeholder="Ask DOM..." onkeypress="handleAiKeyPress(event)" style="flex: 1; padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 0.85rem;">
+            <button class="btn btn-primary btn-sm" onclick="submitAiMessage()">Send</button>
         </div>
     </div>
 
-    <!-- Create/Edit Project Modal -->
-    <div id="projectModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="modalTitle">New Engineering Project</h3>
-                <button class="modal-close" onclick="closeModal('projectModal')">&times;</button>
-            </div>
+    <!-- Project Create/Edit Modal -->
+    <div id="projectModal" class="modal hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+        <div class="modal-content" style="background: var(--bg-main); padding: 24px; border-radius: var(--radius-md); width: 450px; border: 1px solid var(--border);">
+            <h3 id="modalTitle" style="margin-bottom: 16px; font-weight: 700;">New Project</h3>
             <form id="projectForm" onsubmit="saveProject(event)">
                 <input type="hidden" id="projectId">
-                <div class="form-group">
-                    <label for="title">Project Name</label>
-                    <input type="text" id="title" required placeholder="e.g., Solar Energy System">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 0.85rem; display: block; margin-bottom: 4px;">Title</label>
+                    <input type="text" id="title" required style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);">
                 </div>
-                <div class="form-group">
-                    <label for="category">Category</label>
-                    <select id="category">
-                        <option value="Renewable Energy">Renewable Energy</option>
-                        <option value="Robotics & Automation">Robotics & Automation</option>
-                        <option value="Durable Electronics">Durable Electronics</option>
-                        <option value="Environmental Restoration">Environmental Restoration</option>
-                        <option value="General Engineering">General Engineering</option>
-                    </select>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 0.85rem; display: block; margin-bottom: 4px;">Category</label>
+                    <input type="text" id="category" value="General Engineering" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);">
                 </div>
-                <div class="form-group">
-                    <label for="status">Status</label>
-                    <select id="status">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 0.85rem; display: block; margin-bottom: 4px;">Status</label>
+                    <select id="status" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);">
                         <option value="Active">Active</option>
                         <option value="Completed">Completed</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="problemStatement">Problem Statement</label>
-                    <textarea id="problemStatement" rows="2" placeholder="What core problem does this solve?"></textarea>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 0.85rem; display: block; margin-bottom: 4px;">Problem Statement</label>
+                    <textarea id="problemStatement" rows="2" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);"></textarea>
                 </div>
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" rows="3" placeholder="Technical specifications & overview..."></textarea>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 0.85rem; display: block; margin-bottom: 4px;">Description</label>
+                    <textarea id="description" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);"></textarea>
                 </div>
-                <div class="modal-actions">
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Invention</button>
+                    <button type="submit" class="btn btn-primary">Save Project</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="modal-overlay hidden">
-        <div class="modal modal-sm">
-            <div class="modal-header">
-                <h3>Delete Project</h3>
-                <button class="modal-close" onclick="closeModal('deleteModal')">&times;</button>
-            </div>
-            <p style="margin: 15px 0; font-size: 0.9rem; color: var(--text-muted);">Are you sure you want to delete this project? This action cannot be undone.</p>
-            <div class="modal-actions">
+    <div id="deleteModal" class="modal hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+        <div class="modal-content" style="background: var(--bg-main); padding: 24px; border-radius: var(--radius-md); width: 350px; border: 1px solid var(--border); text-align: center;">
+            <h3 style="margin-bottom: 12px; font-weight: 700;">Confirm Deletion</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Are you sure you want to delete this item from the EDEN ecosystem?</p>
+            <div style="display: flex; justify-content: center; gap: 8px;">
                 <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
                 <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
             </div>
         </div>
     </div>
 
+    <!-- Modular JavaScript Scripts -->
     <script src="js/app.js"></script>
-    <script>
-        let efficiencyChartInstance = null;
-        document.addEventListener('DOMContentLoaded', () => {
-            const ctx = document.getElementById('efficiencyChart').getContext('2d');
-            efficiencyChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['0°', '30°', '60°', '90°'],
-                    datasets: [
-                        {
-                            label: 'Current',
-                            data: [18, 21, 22, 21],
-                            borderColor: '#94a3b8',
-                            borderDash: [3, 3],
-                            tension: 0.4
-                        },
-                        {
-                            label: 'Optimized',
-                            data: [20, 24, 25, 24],
-                            borderColor: '#367B4B',
-                            tension: 0.4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: true, position: 'bottom' } },
-                    scales: { y: { min: 15, max: 25 } }
-                }
-            });
-        });
-    </script>
+    <script src="js/ideas.js"></script>
 </body>
 </html>

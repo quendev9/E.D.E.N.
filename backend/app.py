@@ -1,168 +1,144 @@
+from flask import Flask, jsonify, request, send_from_directory
 import sqlite3
 import os
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'eden.db')
-FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
+DB_PATH = os.path.join(os.path.dirname(__file__), 'database', 'eden.db')
 
-def get_db():
+def get_db_connection():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
-    conn = get_db()
+    conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Projects Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            category TEXT DEFAULT 'General Engineering',
-            description TEXT,
-            problem_statement TEXT,
+            category TEXT,
             status TEXT DEFAULT 'Active',
+            problem_statement TEXT,
+            description TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Ideas Table (Concept Incubator)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ideas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            category TEXT DEFAULT 'General',
+            raw_notes TEXT,
+            tags TEXT,
+            status TEXT DEFAULT 'Incubating',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
     conn.commit()
     conn.close()
 
 init_db()
 
-# Serve Frontend Static Files
 @app.route('/')
 def serve_index():
-    return send_from_directory(FRONTEND_DIR, 'index.html')
+    return send_from_directory(app.static_folder, 'index.html')
 
-@app.route('/css/<path:filename>')
-def serve_css(filename):
-    return send_from_directory(os.path.join(FRONTEND_DIR, 'css'), filename)
-
-@app.route('/js/<path:filename>')
-def serve_js(filename):
-    return send_from_directory(os.path.join(FRONTEND_DIR, 'js'), filename)
-
-# API Routes
+# --- PROJECTS API ---
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
     status_filter = request.args.get('status', 'All')
-    search_query = request.args.get('search', '').strip()
-    
-    conn = get_db()
+    search_query = request.args.get('search', '')
+    conn = get_db_connection()
     cursor = conn.cursor()
-    
     query = "SELECT * FROM projects WHERE 1=1"
     params = []
-    
     if status_filter != 'All':
         query += " AND status = ?"
         params.append(status_filter)
-        
     if search_query:
-        query += " AND (title LIKE ? OR description LIKE ? OR problem_statement LIKE ?)"
-        wildcard = f"%{search_query}%"
-        params.extend([wildcard, wildcard, wildcard])
-        
+        query += " AND (title LIKE ? OR description LIKE ?)"
+        params.extend([f"%{search_query}%", f"%{search_query}%"])
     query += " ORDER BY updated_at DESC"
-    
     cursor.execute(query, params)
-    rows = cursor.fetchall()
-    projects = [dict(row) for row in rows]
+    projects = cursor.fetchall()
     conn.close()
-    
-    return jsonify(projects)
-
-@app.route('/api/projects', methods=['POST'])
-def create_project():
-    data = request.get_json(silent=True) or request.form or {}
-    title = data.get('title')
-    
-    if not title:
-        print("❌ ERROR: Title is missing from request data.")
-        return jsonify({'error': 'Title is required'}), 400
-        
-    category = data.get('category', 'General Engineering')
-    description = data.get('description', '')
-    problem_statement = data.get('problem_statement', '')
-    status = data.get('status', 'Active')
-    
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO projects (title, category, description, problem_statement, status)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (title, category, description, problem_statement, status))
-        conn.commit()
-        new_id = cursor.lastrowid
-        conn.close()
-        print(f"✅ SUCCESS: Created project ID {new_id}: '{title}' [{status}]")
-        return jsonify({'id': new_id, 'message': 'Project created successfully'}), 201
-    except Exception as e:
-        print(f"❌ Database Error: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/projects/<int:project_id>', methods=['PUT'])
-def update_project(project_id):
-    data = request.get_json(silent=True) or request.form or {}
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('''
-            UPDATE projects
-            SET title = ?, category = ?, description = ?, problem_statement = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (
-            data.get('title'),
-            data.get('category', 'General Engineering'),
-            data.get('description', ''),
-            data.get('problem_statement', ''),
-            data.get('status', 'Active'),
-            project_id
-        ))
-        conn.commit()
-        conn.close()
-        return jsonify({'message': 'Project updated successfully'})
-    except Exception as e:
-        print(f"❌ Database Error on Update: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
-def delete_project(project_id):
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM projects WHERE id = ?', (project_id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'message': 'Project deleted successfully'})
-    except Exception as e:
-        print(f"❌ Database Error on Delete: {e}")
-        return jsonify({'error': str(e)}), 500
+    return jsonify([dict(row) for row in projects])
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    conn = get_db()
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) as total FROM projects')
+    cursor.execute("SELECT COUNT(*) as total FROM projects")
     total = cursor.fetchone()['total']
     cursor.execute("SELECT COUNT(*) as active FROM projects WHERE status = 'Active'")
     active = cursor.fetchone()['active']
     cursor.execute("SELECT COUNT(*) as completed FROM projects WHERE status = 'Completed'")
     completed = cursor.fetchone()['completed']
     conn.close()
+    return jsonify({'total': total, 'active': active, 'completed': completed})
+
+# --- IDEA STUDIO API ---
+@app.route('/api/ideas', methods=['GET'])
+def get_ideas():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ideas ORDER BY updated_at DESC")
+    ideas = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in ideas])
+
+@app.route('/api/ideas', methods=['POST'])
+def create_idea():
+    data = request.get_json()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO ideas (title, category, raw_notes, tags) VALUES (?, ?, ?, ?)",
+        (data.get('title'), data.get('category', 'General'), data.get('raw_notes'), data.get('tags', ''))
+    )
+    conn.commit()
+    idea_id = cursor.lastrowid
+    conn.close()
+    return jsonify({'message': 'Idea created successfully', 'id': idea_id}), 201
+
+@app.route('/api/ideas/<int:idea_id>', methods=['DELETE'])
+def delete_idea(idea_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Idea deleted successfully'})
+
+@app.route('/api/ideas/<int:idea_id>/promote', methods=['POST'])
+def promote_idea(idea_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ideas WHERE id = ?", (idea_id,))
+    idea = cursor.fetchone()
     
-    return jsonify({
-        'total': total,
-        'active': active,
-        'completed': completed
-    })
+    if not idea:
+        conn.close()
+        return jsonify({'error': 'Idea not found'}), 404
+
+    cursor.execute(
+        "INSERT INTO projects (title, category, status, problem_statement, description) VALUES (?, ?, 'Active', ?, ?)",
+        (idea['title'], idea['category'], idea['raw_notes'], f"Promoted from Idea Studio. Tags: {idea['tags']}")
+    )
+    cursor.execute("UPDATE ideas SET status = 'Promoted' WHERE id = ?", (idea_id,))
+    conn.commit()
+    project_id = cursor.lastrowid
+    conn.close()
+    return jsonify({'message': 'Idea promoted to project!', 'project_id': project_id})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

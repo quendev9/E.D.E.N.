@@ -53,7 +53,6 @@ async function fetchLiveActivity() {
             return;
         }
 
-        // Display recent projects as live activity items
         projects.slice(0, 5).forEach(p => {
             const item = document.createElement('div');
             item.className = 'timeline-item';
@@ -227,6 +226,7 @@ function switchView(viewName, element) {
 
     const cmdCenter = document.getElementById('viewCommandCenter');
     const dynamicView = document.getElementById('viewDynamic');
+    const contentArea = document.getElementById('dynamicViewContent');
 
     if (viewName === 'Command Center' || viewName === 'Recent' || viewName === 'My Projects') {
         cmdCenter.classList.remove('hidden');
@@ -239,8 +239,10 @@ function switchView(viewName, element) {
         document.getElementById('dynamicViewTitle').innerText = viewName;
         document.getElementById('dynamicViewDesc').innerText = `${viewName} module active in EDEN ecosystem.`;
         
-        const contentArea = document.getElementById('dynamicViewContent');
-        if (viewName === 'Simulation Lab') {
+        // --- IDEA STUDIO ROUTE CONNECTION ---
+        if (viewName === 'Idea Studio') {
+            loadIdeaStudioView(contentArea);
+        } else if (viewName === 'Simulation Lab') {
             contentArea.innerHTML = `
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div style="background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
@@ -253,21 +255,17 @@ function switchView(viewName, element) {
                             <label>Load Resistance (Ω)</label>
                             <input type="number" value="45.0">
                         </div>
-                        <button class="btn btn-primary" style="margin-top: 10px;" onclick="alert('Simulation executed successfully! Output efficiency optimized.')">Run Simulation</button>
+                        <button class="btn btn-primary" style="margin-top: 10px;" onclick="alert('Simulation executed successfully!')">Run Simulation</button>
                     </div>
                     <div style="background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
                         <h4>Real-Time Telemetry</h4>
-                        <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">System operating at nominal thresholds. Power output stable.</p>
+                        <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">System operating at nominal thresholds.</p>
                         <div style="margin-top: 20px; font-size: 1.2rem; font-weight: 700; color: var(--green-primary);">Efficiency: 94.2%</div>
                     </div>
                 </div>
             `;
-        } else if (viewName === 'Idea Studio') {
-            contentArea.innerHTML = `<p>Concept incubator active. Brainstorming raw ideas and sketches.</p>`;
-        } else if (viewName === 'Research Library') {
-            contentArea.innerHTML = `<p>Centralized data sheets, equations, and research publications repository.</p>`;
         } else {
-            contentArea.innerHTML = `<p>Workspace module initialized and ready for engineering tasks.</p>`;
+            contentArea.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">Workspace module initialized and ready for engineering tasks.</p>`;
         }
     }
 }
@@ -332,7 +330,6 @@ function initDraggableDom() {
         bubble.style.right = 'auto';
         bubble.style.bottom = 'auto';
 
-        // Keep chat window aligned near DOM
         chatWin.style.left = `${newX - 300}px`;
         chatWin.style.top = `${newY - 450}px`;
         chatWin.style.right = 'auto';
@@ -343,7 +340,6 @@ function initDraggableDom() {
         isDragging = false;
     });
 
-    // Toggle chat on click (if didn't drag)
     bubble.addEventListener('click', () => {
         if (!hasMoved) {
             toggleDomChat();
